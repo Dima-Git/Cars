@@ -7,6 +7,7 @@ class ImageStream {
 	
 public:
 	virtual bool getImage(cv::Mat & image) = 0;
+	virtual ~ImageStream() {}
 	
 };
 
