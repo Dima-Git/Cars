@@ -23,7 +23,11 @@ int main(int argc, char * argv[])
 	std::vector<cv::Mat> images;
 	cv::Mat frame;
 	pstream->getImage(frame);
-	DifferenceAnalyzer analyzer(frame, (argc>=4)?argv[3]:"calibrator/calibration.cfg");
+	DifferenceAnalyzer analyzer(frame, (argc >= 4) ? argv[3] : "calibrator/calibration.cfg");
+	
+	int delay = 0;
+	if ( argc >= 5 )
+		sscanf(argv[4], "%d", &delay);
 	
 	for ( int stage = 0 ; stage < DifferenceAnalyzer::STAGE_COUNT ; ++ stage )
 		cv::namedWindow(((std::stringstream&)(std::stringstream()<<stage)).str(), cv::WINDOW_AUTOSIZE);
@@ -38,12 +42,19 @@ int main(int argc, char * argv[])
 			cv::imshow(((std::stringstream&)(std::stringstream()<<stage)).str(), frame);
 		}
 		
-		switch (cv::waitKey(0)) {
-		case -1 :
-			break;
-		case 27 :
-			running = false;
-			break;
+		for ( bool spaced = false ; !spaced ; ) {
+			switch (cv::waitKey(delay)) {
+			case -1 :
+				spaced = true;
+				break;
+			case 27 :
+				running = false;
+				spaced = true;
+				break;
+			case 32 : 
+				spaced = true;
+				break;
+			}
 		}
 	}
 	

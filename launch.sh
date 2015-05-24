@@ -1,1 +1,1 @@
-./cars.out parking.cfg 11 calibrator/calibration.cfg
+./cars.out parking.cfg 11 calibrator/calibration.cfg 40
