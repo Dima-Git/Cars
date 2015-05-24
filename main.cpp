@@ -16,10 +16,14 @@ int main(int argc, char * argv[])
 		return 2;
 	}
 	
+	int carsCount = 0;
+	if ( argc >= 3 )
+		sscanf(argv[2], "%d", &carsCount);
+	
 	std::vector<cv::Mat> images;
 	cv::Mat frame;
 	pstream->getImage(frame);
-	DifferenceAnalyzer analyzer(frame, argv[2]);
+	DifferenceAnalyzer analyzer(frame, (argc>=4)?argv[3]:"calibrator/calibration.cfg");
 	
 	for ( int stage = 0 ; stage < DifferenceAnalyzer::STAGE_COUNT ; ++ stage )
 		cv::namedWindow(((std::stringstream&)(std::stringstream()<<stage)).str(), cv::WINDOW_AUTOSIZE);
@@ -27,13 +31,14 @@ int main(int argc, char * argv[])
 	bool running = true;
 	while (running && pstream->getImage(frame)) {
 		
-		analyzer.takeNextImage(frame);
+		carsCount += analyzer.takeNextImage(frame);
+		std::cout << "Cars count : " << carsCount << std::endl;  
 		for ( int stage = 0 ; stage < DifferenceAnalyzer::STAGE_COUNT ; ++ stage ) {
 			analyzer.getStage(frame, stage);
 			cv::imshow(((std::stringstream&)(std::stringstream()<<stage)).str(), frame);
 		}
 		
-		switch (cv::waitKey(100)) {
+		switch (cv::waitKey(0)) {
 		case -1 :
 			break;
 		case 27 :
