@@ -20,7 +20,6 @@ int main(int argc, char * argv[])
 	if ( argc >= 3 )
 		sscanf(argv[2], "%d", &carsCount);
 	
-	std::vector<cv::Mat> images;
 	cv::Mat frame;
 	pstream->getImage(frame);
 	DifferenceAnalyzer analyzer(frame, (argc >= 4) ? argv[3] : "calibrator/calibration.cfg");
@@ -36,14 +35,18 @@ int main(int argc, char * argv[])
 	while (running && pstream->getImage(frame)) {
 		
 		carsCount += analyzer.takeNextImage(frame);
-		std::cout << "Cars count : " << carsCount << std::endl;  
+		std::cout << "Cars count : " << carsCount << std::endl;
+		std::vector<DifferenceAnalyzer::Change> changes = analyzer.getChanges();
+		for ( size_t i = 0 ; i < changes.size() ; ++ i ) {
+			std::cout << changes[i].rect << " | " << changes[i].type << std::endl;
+		}
 		for ( int stage = 0 ; stage < DifferenceAnalyzer::STAGE_COUNT ; ++ stage ) {
 			analyzer.getStage(frame, stage);
 			cv::imshow(((std::stringstream&)(std::stringstream()<<stage)).str(), frame);
 		}
 		
 		for ( bool spaced = false ; !spaced ; ) {
-			switch (cv::waitKey(delay)) {
+			switch ((short)cv::waitKey(delay)) {
 			case -1 :
 				spaced = true;
 				break;

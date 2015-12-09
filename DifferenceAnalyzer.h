@@ -11,14 +11,25 @@ class DifferenceAnalyzer {
 	
 public:
 	
-	enum Stage { STAGE_OLD, 
-		     STAGE_NEW, 
-		     STAGE_DIFF, 
-		     STAGE_THRESH, 
-		     STAGE_BLUR,
-		     STAGE_GRAY, 
-		     STAGE_DRAW,
-		     STAGE_COUNT };
+	enum Stage { 
+		STAGE_OLD, 
+		STAGE_NEW, 
+		STAGE_DIFF, 
+		STAGE_THRESH, 
+		STAGE_BLUR,
+		STAGE_GRAY, 
+		STAGE_DRAW,
+		STAGE_COUNT
+	};
+	
+	struct Change {
+		enum { 
+			CHANGE_APPEARED,
+			CHANGE_DISAPPEARED,
+			CHANGE_REPLACED 
+		} type;
+		cv::Rect rect;
+	};
 	
 	DifferenceAnalyzer(cv::Mat image, const char * configPath) {
 		loadCalibration(configPath);
@@ -34,14 +45,20 @@ public:
 		return analyze();
 	}
 	
-	void getStage(cv::Mat & image, int stage) const {
+	void getStage(cv::Mat & image, size_t stage) const {
 		if ( stage >= 0 && stage < stages.size() )
 			stages[stage].copyTo(image);
+	}
+	
+	std::vector<Change> getChanges() const {
+		return changes;
 	}
 	
 private:
 	
 	std::vector<cv::Mat> stages;
+	
+	std::vector<Change> changes;
 	
 	int var_area_min;
 	int var_area_max;
@@ -77,6 +94,7 @@ private:
 	
 	int analyze() {
 		int answerShift = 0;
+		changes.clear();
 		
 		cv::absdiff(stages[STAGE_OLD], stages[STAGE_NEW], stages[STAGE_DIFF]);
 		cv::threshold(stages[STAGE_DIFF], stages[STAGE_THRESH], var_thresh, 255, var_thresh_type);
@@ -90,12 +108,12 @@ private:
 		cv::findContours(stages[STAGE_DRAW], contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 		stages[STAGE_NEW].copyTo(stages[STAGE_DRAW]);
 		cv::drawContours(stages[STAGE_DRAW], contours, -1, cv::Scalar(255,255,0));
-		for ( int i = 0 ; i < contours.size() ; ++ i ) {
+		for ( size_t i = 0 ; i < contours.size() ; ++ i ) {
 			double area = cv::contourArea(contours[i]);
 			if ( area >= var_area_min && area <= var_area_max ) {
 				cv::Rect rect = cv::boundingRect(contours[i]);
 				cv::Mat hsv_old, hsv_new;
-				int channels[] = {0, 1};
+				
 				cv::cvtColor(stages[STAGE_OLD](rect), hsv_old, cv::COLOR_RGB2HSV);
 				cv::cvtColor(stages[STAGE_NEW](rect), hsv_new, cv::COLOR_RGB2HSV);
 				
@@ -106,17 +124,29 @@ private:
 				double dp_old = sd_old.dot(sd_old);
 				double dp_new = sd_new.dot(sd_new);
 				
-				if ( dp_old * 3 < dp_new ) { // Object appeared
+				Change change;
+				change.rect = rect;
+				
+				const double dp_thresh = 2000.0; // deviation threshhold
+				
+				if ( dp_old < dp_thresh && dp_new > dp_thresh ) { // Object appeared
 					cv::rectangle(stages[STAGE_DRAW], rect, cv::Scalar(0,255,0));
 					answerShift ++;
+					change.type = Change::CHANGE_APPEARED;
 				}
-				else if ( dp_new * 3 < dp_old ) { // Object disappeared
+				else if ( dp_new < dp_thresh &&  dp_old > dp_thresh ) { // Object disappeared
 					cv::rectangle(stages[STAGE_DRAW], rect, cv::Scalar(0,0,255));
 					answerShift --;
+					change.type = Change::CHANGE_DISAPPEARED;
 				}
-				else // Object replacement
+				else { // Object replacement
 					cv::rectangle(stages[STAGE_DRAW], rect, cv::Scalar(255,0,0));
+					change.type = Change::CHANGE_REPLACED;
+				}
 				
+				cv::putText(stages[STAGE_DRAW], ((std::stringstream&)(std::stringstream()<<dp_old)).str(), rect.tl(), 6, 1, cv::Scalar(0,255,255));
+				cv::putText(stages[STAGE_DRAW], ((std::stringstream&)(std::stringstream()<<dp_new)).str(), rect.br(), 6, 1, cv::Scalar(255,255,0));
+				changes.push_back(change);
 			}
 		}
 		return answerShift;

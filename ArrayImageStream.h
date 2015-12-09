@@ -24,7 +24,7 @@ public:
 private:
 	
 	std::vector<cv::Mat> images;
-	int index;
+	size_t index;
 	
 };
 

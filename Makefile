@@ -1,4 +1,4 @@
-CVFLAGS = `pkg-config --cflags opencv`
+CVFLAGS = `pkg-config --cflags opencv` -Wall
 CVLIBS = `pkg-config --libs opencv`
 
 all:
