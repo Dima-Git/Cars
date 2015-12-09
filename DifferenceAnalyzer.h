@@ -23,12 +23,8 @@ public:
 	};
 	
 	struct Change {
-		enum { 
-			CHANGE_APPEARED,
-			CHANGE_DISAPPEARED,
-			CHANGE_REPLACED 
-		} type;
 		cv::Rect rect;
+		int type;
 	};
 	
 	DifferenceAnalyzer(cv::Mat image, const char * configPath) {
@@ -132,16 +128,16 @@ private:
 				if ( dp_old < dp_thresh && dp_new > dp_thresh ) { // Object appeared
 					cv::rectangle(stages[STAGE_DRAW], rect, cv::Scalar(0,255,0));
 					answerShift ++;
-					change.type = Change::CHANGE_APPEARED;
+					change.type = 1;
 				}
 				else if ( dp_new < dp_thresh &&  dp_old > dp_thresh ) { // Object disappeared
 					cv::rectangle(stages[STAGE_DRAW], rect, cv::Scalar(0,0,255));
 					answerShift --;
-					change.type = Change::CHANGE_DISAPPEARED;
+					change.type = -1;
 				}
 				else { // Object replacement
 					cv::rectangle(stages[STAGE_DRAW], rect, cv::Scalar(255,0,0));
-					change.type = Change::CHANGE_REPLACED;
+					change.type = 0;
 				}
 				
 				cv::putText(stages[STAGE_DRAW], ((std::stringstream&)(std::stringstream()<<dp_old)).str(), rect.tl(), 6, 1, cv::Scalar(0,255,255));
